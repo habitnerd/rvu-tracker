@@ -1,0 +1,48 @@
+name: Test and deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # The check against the raw CMS files skips here because cms-source/ is not in the repo.
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Collect the site files only
+        run: |
+          mkdir _site
+          cp -r index.html styles.css sw.js manifest.webmanifest icon.svg icon-180.png robots.txt js data _site/
+          # A new cache name per deploy makes every device drop its old offline copy.
+          sed -i "s/rvu-tracker-v1/rvu-tracker-${GITHUB_SHA::7}/" _site/sw.js
+          grep -q "rvu-tracker-${GITHUB_SHA::7}" _site/sw.js
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,5 @@
+# Raw CMS downloads. Kept locally so tools/build-data.mjs and the data test can read
+# them, but not published with the site.
+cms-source/
+.DS_Store
+node_modules/
